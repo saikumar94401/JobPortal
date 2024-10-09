@@ -1,5 +1,5 @@
 import { User } from "../models/user.model.js";
-import  bcrypt  from 'bcryptjs'
+import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
 export const register = async (req, res) => {
@@ -46,17 +46,18 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const { email, password, role } = req.body;
-        if (!email, !password, !role) {
+        if (!email ||  !password || !role) {
             return res.status(400).json({
                 message: "Missing Details",
                 success: false
             })
         }
-
+        console.log(email)
         let user = await User.findOne({ email });
+        console.log(user)
         if (!user) {
             return res.status(400).json({
-                message: "Invalid Credentials",
+                message: "Invalid Credentials email",
                 success: false
             })
         }
@@ -78,8 +79,9 @@ export const login = async (req, res) => {
         const tokenData = {
             userId: user._id
         }
-
+        // console.log(`user._id : ${tokenData.userId}`);
         const token = await jwt.sign(tokenData, process.env.SECRET_KEY, { expiresIn: '1d' });
+        // console.log(`token Data in login : ${token}`);
         user = {
             _id: user.id,
             fullname: user.fullname,
@@ -103,9 +105,9 @@ export const login = async (req, res) => {
 
 export const logout = async (req, res) => {
     try {
-
-        res.status(200).cookie({ maxAge: 0 }).json({
-            message: ""
+        console.log('hello ')
+        res.status(200).cookie("token",'',{ maxAge: 0 }).json({
+            message: "logout"
         })
 
     } catch (err) {
@@ -118,28 +120,35 @@ export const logout = async (req, res) => {
 export const updateProfile = async (req, res) => {
 
     try {
+        console.log("updateProfile")
         const { fullname, email, phoneNumber, skills, bio } = req.body;
-        if (!fullname, !email, !phoneNumber, !skills, !bio) {
-            return res.status(400).json({
-                message: "Missing Details",
-                success: false
-            })
+        // if (!fullname, !email, !phoneNumber, !skills, !bio) {
+        //     return res.status(400).json({
+        //         message: "Missing Details",
+        //         success: false
+        //     })
+        // }
+        console.log("update")
+        console.log(req.cookies.token)
+        const userId = req.id; // middlware authentication
+        let skillsArray
+        if (skills) {
+            skillsArray = skills.split(",");
         }
-        const userId = req.id; // middlware authentication  need clarification
-        const skillsArray = skills.split(",");
-        let user = await User.findOne({ userId });
+        console.log("hello")
+        let user = await User.findById(userId);
+        console.log(user);
         if (!user) {
             return res.status(400).json({
                 message: "User Not Found",
                 success: false
             })
         }
-
-        user.fullname = fullname;
-        user.email = email;
-        user.phoneNumber = phoneNumber;
-        user.profile.skills = skills;
-        user.profile.bio = bio;
+        if (fullname) user.fullname = fullname;
+        if (email) user.email = email;
+        if (phoneNumber) user.phoneNumber = phoneNumber;
+        if (skills) user.profile.skills = skills;
+        if (bio) user.profile.bio = bio;
 
         user.save();
 
@@ -149,7 +158,7 @@ export const updateProfile = async (req, res) => {
             email: user.email,
             phoneNumber: user.phoneNumber,
             profileSkills: user.skills,
-            profileBio: user
+            profileBio: user.bio
         }
 
         return res.status(200).json({
